@@ -24,6 +24,8 @@ public class Main {
         g.printGrammar();
         System.out.println(String.format("There are %d terminals and %d non-terminals", g.terminals.size() - 2, g.nonTerminals.size()));        
         System.out.println(String.format("There are %d rules", g.rules.size()));
+        g.leftFactor();
+        g.printGrammar();
         g.leftRecursion();
         g.printGrammar();
         g.saveGrammar(outputPath);

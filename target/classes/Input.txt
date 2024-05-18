@@ -1,6 +1,6 @@
 ,
-+,id
++,-,id
 E,T
-E->E+T|T
+E->E+T|E-T|T
 T->id
 E

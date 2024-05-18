@@ -9,9 +9,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 // Define the required data type
 enum type {
@@ -73,9 +71,9 @@ public class grammar {
         // Initiate the array list of grammar rules
         this.rules = new ArrayList<rule>();
 
+        // Define the epsilon and dollar symbols as special terminals and add them to the grammar
         grammar.epsilon = new literal("\u03B5", type.terminal);
         grammar.dollar = new literal("$", type.terminal);
-        
         this.terminals.add(grammar.epsilon);
         this.terminals.add(grammar.dollar);
     }
@@ -153,14 +151,11 @@ public class grammar {
         
         System.out.println("Eliminating left recursion...!!!");
 
-        // Create a map to count left recursions of each non-terminal
-        Map<literal, Integer> count = new HashMap<literal, Integer>();
         int i = 0;
         while(i < this.rules.size()) {
 
-            // Check for left recursion and update the map
+            // Check for left recursion
             if(this.rules.get(i).lhs.symbol == this.rules.get(i).rhs.get(0).symbol) {
-                count.put(this.rules.get(i).lhs, count.getOrDefault(this.rules.get(i).lhs, 0) + 1);
                 
                 // Consider the rule as A -> Aα | ß1 | ß2 | .... | ßn
                 // Gather the α for the left recursion
@@ -173,9 +168,15 @@ public class grammar {
                 for(int j = 0; j < this.rules.size(); j++)
                     if(this.rules.get(j).lhs.symbol == this.rules.get(i).lhs.symbol && this.rules.get(j).lhs.symbol != this.rules.get(j).rhs.get(0).symbol)
                         ßIDs.add(j);
+                
+                if(ßIDs.size() == 0) {
+                    System.out.println("Cannot remove left recursion of " + this.rules.get(i).lhs.symbol + " due to missing ß");
+                    i++;
+                    continue;
+                }
 
                 // Rewrite the rule as A -> (ß1 | ß2 | .... | ßn)A<count> and A<count> -> αA<count> | ε
-                literal dupl = new literal(this.rules.get(i).lhs.symbol + Integer.toString(count.get(this.rules.get(i).lhs)), type.nonTerminal);
+                literal dupl = new literal(this.rules.get(i).lhs.symbol + "2", type.nonTerminal);
                 this.nonTerminals.add(dupl);
                 for(Integer index : ßIDs)
                     this.rules.get(index).rhs.add(dupl);
@@ -198,6 +199,51 @@ public class grammar {
         return;
     }
 
+    public void leftFactor() {
+
+        System.out.println("Eliminating left factors...!!!");
+        
+        int i = 0;
+        while(i < this.rules.size()) {
+            List<Integer> factors = new ArrayList<Integer>();
+            List<Integer> nonfactors = new ArrayList<Integer>();
+            for(int j = i + 1; j < this.rules.size(); j++) {
+                if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol) && this.rules.get(i).rhs.get(0).symbol.equals(this.rules.get(j).rhs.get(0).symbol))
+                    factors.add(j);
+                else if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol))
+                    nonfactors.add(j);
+            }
+            if(factors.size() > 0) {
+                literal lhs = this.rules.get(i).lhs;
+                literal dupl = new literal(this.rules.get(i).lhs.symbol + "1", type.nonTerminal);
+                List<literal> rhsList = new ArrayList<literal>();
+                rhsList.add(this.rules.get(i).rhs.get(0));
+                rhsList.add(dupl);
+                this.nonTerminals.add(dupl);
+                rule r = new rule(lhs, rhsList);
+                factors.add(0, i);
+                for(Integer index : factors) {
+                    this.rules.get(index).lhs = dupl;
+                    this.rules.get(index).rhs.remove(0);
+                }
+                this.rules.add(i, r);
+                for(Integer index : nonfactors) {
+                    int j = index + 1;
+                    while(this.rules.get(j).lhs.symbol.equals(this.rules.get(j - 1).lhs.symbol) == false) {
+                        rule temp = this.rules.get(j);
+                        this.rules.set(j, this.rules.get(j - 1));
+                        this.rules.set(j - 1, temp);
+                        j--;
+                    }
+                }
+            }
+            i++;
+        }
+
+        return;
+    }
+
+    // A method to print the grammar on the console
     public void printGrammar() {
         System.out.println("The Grammar is");
         for(int i = 0; i < this.rules.size(); i++) {
@@ -209,7 +255,10 @@ public class grammar {
         return;
     }
 
+    // A method to save the grammar to an output file
     public void saveGrammar(String outputPath) {
+        
+        // Try to open the file and handle the error
         try(OutputStreamWriter output = new OutputStreamWriter(new FileOutputStream(outputPath), "UTF-8")) {
             for(int i = 0; i < this.rules.size(); i++) {
                 output.write((this.rules.get(i).lhs.symbol + "->"));
