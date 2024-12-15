@@ -169,13 +169,14 @@ public class grammar {
                     if(this.rules.get(j).lhs.symbol == this.rules.get(i).lhs.symbol && this.rules.get(j).lhs.symbol != this.rules.get(j).rhs.get(0).symbol)
                         ßIDs.add(j);
                 
+                // Handle the case of missing ß production
                 if(ßIDs.size() == 0) {
-                    System.out.println("Cannot remove left recursion of " + this.rules.get(i).lhs.symbol + " due to missing ß");
+                    System.out.println("Cannot remove left recursion of " + this.rules.get(i).lhs.symbol + " due to missing ß production");
                     i++;
                     continue;
                 }
 
-                // Rewrite the rule as A -> (ß1 | ß2 | .... | ßn)A<count> and A<count> -> αA<count> | ε
+                // Rewrite the rule as A -> (ß1 | ß2 | .... | ßn)A2 and A2 -> αA2 | ε
                 literal dupl = new literal(this.rules.get(i).lhs.symbol + "2", type.nonTerminal);
                 this.nonTerminals.add(dupl);
                 for(Integer index : ßIDs)
@@ -205,21 +206,32 @@ public class grammar {
         
         int i = 0;
         while(i < this.rules.size()) {
+
+            // Check for left factors
             List<Integer> factors = new ArrayList<Integer>();
-            List<Integer> nonfactors = new ArrayList<Integer>();
+            List<Integer> nonFactors = new ArrayList<Integer>();
             for(int j = i + 1; j < this.rules.size(); j++) {
-                if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol) && this.rules.get(i).rhs.get(0).symbol.equals(this.rules.get(j).rhs.get(0).symbol))
-                    factors.add(j);
-                else if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol))
-                    nonfactors.add(j);
+                if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol)) {
+                    if(this.rules.get(i).rhs.get(0).symbol.equals(this.rules.get(j).rhs.get(0).symbol))
+                        factors.add(j);
+                    else
+                        nonFactors.add(j);
+                }
             }
+
+            // Consider the rule as A -> Bα1 | Bα2 | ... | ß1 | ß2 | .... | ßn
+            // Gather the αs for the left factoring
             if(factors.size() > 0) {
+
+                // Modify the current production rule
                 literal lhs = this.rules.get(i).lhs;
                 literal dupl = new literal(this.rules.get(i).lhs.symbol + "1", type.nonTerminal);
                 List<literal> rhsList = new ArrayList<literal>();
                 rhsList.add(this.rules.get(i).rhs.get(0));
                 rhsList.add(dupl);
                 this.nonTerminals.add(dupl);
+
+                // Add a new rule to include the suffixes
                 rule r = new rule(lhs, rhsList);
                 factors.add(0, i);
                 for(Integer index : factors) {
@@ -227,7 +239,7 @@ public class grammar {
                     this.rules.get(index).rhs.remove(0);
                 }
                 this.rules.add(i, r);
-                for(Integer index : nonfactors) {
+                for(Integer index : nonFactors) {
                     int j = index + 1;
                     while(this.rules.get(j).lhs.symbol.equals(this.rules.get(j - 1).lhs.symbol) == false) {
                         rule temp = this.rules.get(j);

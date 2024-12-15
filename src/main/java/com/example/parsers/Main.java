@@ -22,10 +22,13 @@ public class Main {
         
         // Display the grammar and grammar attributes
         g.printGrammar();
-        System.out.println(String.format("There are %d terminals and %d non-terminals", g.terminals.size() - 2, g.nonTerminals.size()));        
-        System.out.println(String.format("There are %d rules", g.rules.size()));
+        System.out.println(String.format("There are %d terminals, %d non-terminals and %d rules.", g.terminals.size() - 2, g.nonTerminals.size(), g.rules.size()));
+        
+        // Eliminate Left Factoring
         g.leftFactor();
         g.printGrammar();
+
+        // Eliminate Left Recursion
         g.leftRecursion();
         g.printGrammar();
         g.saveGrammar(outputPath);
