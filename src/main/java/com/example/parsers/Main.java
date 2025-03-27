@@ -1,9 +1,6 @@
 // Declare the project package
 package com.example.parsers;
 
-// Import the required java packages
-import java.io.InputStream;
-
 // Define the main class
 public class Main {
 
@@ -12,25 +9,26 @@ public class Main {
 
         // Declare an InputStream instance using the file name
         String inputPath = "Input.txt";
-        InputStream inputFile = Main.class.getClassLoader().getResourceAsStream(inputPath);
         
         // Declare an InputStream instance using the file name
         String outputPath = "Output.txt";
 
         // Load the grammar
-        grammar g = grammar.loadGrammar(inputFile);
+        grammar g = grammar.loadGrammar(inputPath);
         
         // Display the grammar and grammar attributes
         g.printGrammar();
         System.out.println(String.format("There are %d terminals, %d non-terminals and %d rules.", g.terminals.size() - 2, g.nonTerminals.size(), g.rules.size()));
         
         // Eliminate Left Factoring
-        g.leftFactor();
+        g.leftFactoring();
         g.printGrammar();
 
         // Eliminate Left Recursion
         g.leftRecursion();
         g.printGrammar();
+
+        // Save the grammar
         g.saveGrammar(outputPath);
     }
 }

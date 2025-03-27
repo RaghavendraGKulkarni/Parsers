@@ -1,6 +1,6 @@
 ,
-+,-,id,f
+id,*,+
 E,T
-E->Ef+T|Ef-T|T
+E->E+T|E*T|T
 T->id
 E

@@ -146,6 +146,82 @@ public class grammar {
         }
     }
     
+    // Define a method to remove left factoring from the grammar
+    public void leftFactoring() {
+
+        System.out.println("Eliminating left factors...!!!");
+        
+        int i = 0;
+        while(i < this.rules.size()) {
+
+            // Check for left factors
+            List<Integer> factors = new ArrayList<Integer>();
+            List<Integer> nonFactors = new ArrayList<Integer>();
+            for(int j = i + 1; j < this.rules.size(); j++) {
+                if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol)) {
+                    if(this.rules.get(i).rhs.get(0).symbol.equals(this.rules.get(j).rhs.get(0).symbol))
+                        factors.add(j);
+                    else
+                        nonFactors.add(j);
+                }
+            }
+
+            // Consider the rule as A -> Bα1 | Bα2 | ... | Bαm | ß1 | ß2 | .... | ßn
+            // Gather the αs for the left factoring
+            if(factors.size() > 0) {
+
+                // Compute the longest common prefix on the RHS side for all the factors
+                int minLength = this.rules.get(i).rhs.size();
+                for(int j = 0; j < factors.size(); j++)
+                    minLength = (minLength > this.rules.get(factors.get(j)).rhs.size()) ? (this.rules.get(factors.get(j)).rhs.size()) : (minLength);     
+                List<literal> prefix = new ArrayList<literal>();
+                boolean same;
+                for(int j = 0; j < minLength; j++) {
+                    same = true;
+                    for(int k = 0; k < factors.size(); k++)
+                        if(!this.rules.get(i).rhs.get(j).equals(this.rules.get(factors.get(k)).rhs.get(j)))
+                            same = false;
+                    if(same)
+                        prefix.add(this.rules.get(i).rhs.get(j));
+                    else
+                        break;
+                }
+
+                // Rewrite the current rule as A -> BA1 | ß1 | ß2 | .... | ßn
+                literal lhs = this.rules.get(i).lhs;
+                literal dupl = new literal(this.rules.get(i).lhs.symbol + "1", type.nonTerminal);
+                prefix.add(dupl);
+                this.nonTerminals.add(dupl);
+
+                // Add the new rule A1 -> α1 | α2 | ... | αm
+                rule r = new rule(lhs, prefix);
+                factors.add(0, i);
+                for(Integer index : factors) {
+                    this.rules.get(index).lhs = dupl;
+                    for(int j = 0; j < prefix.size() - 1; j++)
+                        this.rules.get(index).rhs.remove(0);
+                    if(this.rules.get(index).rhs.size() == 0)
+                        this.rules.get(index).rhs.add(epsilon);
+                }
+                this.rules.add(i, r);
+
+                // Reorder the rules
+                for(Integer index : nonFactors) {
+                    int j = index + 1;
+                    while(this.rules.get(j).lhs.symbol.equals(this.rules.get(j - 1).lhs.symbol) == false) {
+                        rule temp = this.rules.get(j);
+                        this.rules.set(j, this.rules.get(j - 1));
+                        this.rules.set(j - 1, temp);
+                        j--;
+                    }
+                }
+            }
+            i++;
+        }
+
+        return;
+    }
+
     // Define a method to remove left recursion from the grammar
     public void leftRecursion() {
         
@@ -200,61 +276,6 @@ public class grammar {
         return;
     }
 
-    public void leftFactor() {
-
-        System.out.println("Eliminating left factors...!!!");
-        
-        int i = 0;
-        while(i < this.rules.size()) {
-
-            // Check for left factors
-            List<Integer> factors = new ArrayList<Integer>();
-            List<Integer> nonFactors = new ArrayList<Integer>();
-            for(int j = i + 1; j < this.rules.size(); j++) {
-                if(this.rules.get(i).lhs.symbol.equals(this.rules.get(j).lhs.symbol)) {
-                    if(this.rules.get(i).rhs.get(0).symbol.equals(this.rules.get(j).rhs.get(0).symbol))
-                        factors.add(j);
-                    else
-                        nonFactors.add(j);
-                }
-            }
-
-            // Consider the rule as A -> Bα1 | Bα2 | ... | ß1 | ß2 | .... | ßn
-            // Gather the αs for the left factoring
-            if(factors.size() > 0) {
-
-                // Modify the current production rule
-                literal lhs = this.rules.get(i).lhs;
-                literal dupl = new literal(this.rules.get(i).lhs.symbol + "1", type.nonTerminal);
-                List<literal> rhsList = new ArrayList<literal>();
-                rhsList.add(this.rules.get(i).rhs.get(0));
-                rhsList.add(dupl);
-                this.nonTerminals.add(dupl);
-
-                // Add a new rule to include the suffixes
-                rule r = new rule(lhs, rhsList);
-                factors.add(0, i);
-                for(Integer index : factors) {
-                    this.rules.get(index).lhs = dupl;
-                    this.rules.get(index).rhs.remove(0);
-                }
-                this.rules.add(i, r);
-                for(Integer index : nonFactors) {
-                    int j = index + 1;
-                    while(this.rules.get(j).lhs.symbol.equals(this.rules.get(j - 1).lhs.symbol) == false) {
-                        rule temp = this.rules.get(j);
-                        this.rules.set(j, this.rules.get(j - 1));
-                        this.rules.set(j - 1, temp);
-                        j--;
-                    }
-                }
-            }
-            i++;
-        }
-
-        return;
-    }
-
     // A method to print the grammar on the console
     public void printGrammar() {
         System.out.println("The Grammar is");
@@ -272,12 +293,15 @@ public class grammar {
         
         // Try to open the file and handle the error
         try(OutputStreamWriter output = new OutputStreamWriter(new FileOutputStream(outputPath), "UTF-8")) {
+
+            // Write the grammar to the file
             for(int i = 0; i < this.rules.size(); i++) {
                 output.write((this.rules.get(i).lhs.symbol + "->"));
                 for(int j = 0; j < this.rules.get(i).rhs.size(); j++)
                     output.write((this.rules.get(i).rhs.get(j).symbol));
                     output.write("\n");
             }
+
         } catch(IOException e) {
             System.out.println("Output File Open Error...!!!");
         }
@@ -285,9 +309,12 @@ public class grammar {
     }
 
     // Define a static method to load the grammar from the input text file
-    public static grammar loadGrammar(InputStream inputFile) {
+    public static grammar loadGrammar(String inputPath) {
         
-        // Try-catch block to handle the file opening
+        // File handler for the input file path
+        InputStream inputFile = Main.class.getClassLoader().getResourceAsStream(inputPath);
+
+        // Try to open the file and handle the error
         try(BufferedReader input = new BufferedReader(new InputStreamReader(inputFile))) {
             
             // Read the first line as delimiter
